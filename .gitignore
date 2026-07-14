@@ -1,0 +1,34 @@
+# Binaries
+torpido
+torpido.exe
+*.exe
+*.dll
+*.so
+*.dylib
+dist/
+
+# Test & coverage
+*.test
+*.out
+coverage.html
+
+# Go workspace
+go.work
+go.work.sum
+
+# Env & local config
+.env
+*.local
+
+# Editor
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# SSH host keys (never commit!)
+.ssh/
+*_ed25519
+*_rsa
