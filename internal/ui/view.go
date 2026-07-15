@@ -6,12 +6,54 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/i18n"
 )
 
 // This file holds the shared drawing helpers used by every screen. They take
 // value-copy grids (never a live board), so rendering is always race-free.
 
 type grid = [game.BoardSize][game.BoardSize]game.Cell
+type hullGrid = [game.BoardSize][game.BoardSize]game.Hull
+
+// botName is the difficulty's display name in the player's language.
+func botName(t i18n.Strings, d game.Difficulty) string {
+	switch d {
+	case game.Rookie:
+		return t.BotRookie
+	case game.Admiral:
+		return t.BotAdmiral
+	case game.SeaWolf:
+		return t.BotWolf
+	default:
+		return "Bot"
+	}
+}
+
+// waterCell draws a sea square, with a moving wave crest rolling through.
+func (s styles) waterCell(row, col, frame int) string {
+	if (row+col+frame)%7 == 0 {
+		return s.waterWave.Render("~ ")
+	}
+	return s.water.Render("· ")
+}
+
+// hullBlock draws a ship square as part of a pointed vessel on the sea.
+func (s styles) hullBlock(h game.Hull) string {
+	switch h {
+	case game.HullBowH:
+		return s.shipHull.Render("◀█")
+	case game.HullSternH:
+		return s.shipHull.Render("█▶")
+	case game.HullBowV:
+		return s.shipHull.Render("▲▲")
+	case game.HullSternV:
+		return s.shipHull.Render("▼▼")
+	case game.HullSingle:
+		return s.shipHull.Render("◈ ")
+	default: // HullMidH / HullMidV
+		return s.shipHull.Render("██")
+	}
+}
 
 // coordName turns a coord into its player-facing name, e.g. {0,0} -> "A1".
 func coordName(c game.Coord) string {
@@ -52,7 +94,7 @@ func (s styles) cellBlock(c game.Cell) string {
 //   - aim, if set, highlights the targeting reticle (enemy board only).
 //   - preview, if set, highlights where a ship is about to be placed;
 //     previewValid tints it green (fits) or red (blocked).
-func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool, previewValid bool, boom *boomOverlay) string {
+func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool, previewValid bool, boom *boomOverlay, frame int, hull *hullGrid) string {
 	var sb strings.Builder
 
 	sb.WriteString("   ")
@@ -65,6 +107,7 @@ func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool
 		sb.WriteString(s.dim.Render(fmt.Sprintf("%2d ", r+1)))
 		for c := 0; c < game.BoardSize; c++ {
 			coord := game.Coord{Row: r, Col: c}
+			cell := g[r][c]
 			switch {
 			case boom != nil && boom.Coord == coord && boom.Frame < len(explosionGlyphs):
 				sb.WriteString(s.boom[boom.Frame].Render(explosionGlyphs[boom.Frame] + " "))
@@ -76,8 +119,12 @@ func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool
 				}
 			case aim != nil && *aim == coord:
 				sb.WriteString(s.aim.Render("◎ "))
+			case cell == game.CellShip && hull != nil:
+				sb.WriteString(s.hullBlock(hull[r][c]))
+			case cell == game.CellEmpty:
+				sb.WriteString(s.waterCell(r, c, frame))
 			default:
-				sb.WriteString(s.cellBlock(g[r][c]))
+				sb.WriteString(s.cellBlock(cell))
 			}
 		}
 		sb.WriteString("\n")

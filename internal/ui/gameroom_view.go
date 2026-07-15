@@ -26,6 +26,9 @@ func (m gameModel) View() string {
 
 // opponentName is who you're up against, for headers.
 func (m gameModel) opponentName() string {
+	if m.snap.OppIsBot {
+		return botName(m.t, m.snap.OppTier)
+	}
 	if m.snap.OppName != "" {
 		return m.snap.OppName
 	}
@@ -150,7 +153,7 @@ func (m gameModel) viewPlacing() string {
 		s.dim.Render(m.t.PlaceFleet),
 		strings.Join(roster, "   "),
 		"",
-		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, preview, valid, nil)),
+		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, preview, valid, nil, m.waterFrame, &m.snap.YouHull)),
 		"",
 		m.legend(),
 		"",
@@ -166,7 +169,7 @@ func (m gameModel) viewPlaceWait() string {
 		"",
 		s.badgeYou.Render(m.t.Ready),
 		"",
-		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil)),
+		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil, m.waterFrame, &m.snap.YouHull)),
 		"",
 		s.tag.Render(fmt.Sprintf(m.t.OppPlacingFmt, m.opponentName())),
 		"",
@@ -191,8 +194,8 @@ func (m gameModel) viewBattle() string {
 		}
 	}
 
-	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, ownBoom))
-	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.Enemy, aim, nil, false, enemyBoom))
+	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, ownBoom, m.waterFrame, &m.snap.YouHull))
+	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.Enemy, aim, nil, false, enemyBoom, m.waterFrame, nil))
 	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
 	bw := lipgloss.Width(boards)
 
@@ -226,8 +229,8 @@ func (m gameModel) viewOver() string {
 	}
 	score := s.wl(m.snap.YourScore, m.snap.OppScore) + "  " + s.tag.Render(fmt.Sprintf(m.t.VsFmt, m.opponentName()))
 
-	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil))
-	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.EnemyFull, nil, nil, false, nil))
+	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil, m.waterFrame, &m.snap.YouHull))
+	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.EnemyFull, nil, nil, false, nil, m.waterFrame, &m.snap.EnemyHull))
 	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
 
 	var footer string

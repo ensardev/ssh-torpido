@@ -17,6 +17,10 @@ type Snapshot struct {
 	You        [game.BoardSize][game.BoardSize]game.Cell // your board, ships shown
 	Enemy      [game.BoardSize][game.BoardSize]game.Cell // enemy board, ships hidden
 	EnemyFull  [game.BoardSize][game.BoardSize]game.Cell // enemy board revealed (for game over)
+	YouHull    [game.BoardSize][game.BoardSize]game.Hull // your ship shapes
+	EnemyHull  [game.BoardSize][game.BoardSize]game.Hull // enemy ship shapes (for game over)
+	OppIsBot   bool
+	OppTier    game.Difficulty
 	YourTurn   bool
 	YouPlaced  bool
 	OppPlaced  bool
@@ -118,6 +122,8 @@ func (r *Room) Snapshot(side game.Side) Snapshot {
 		You:        m.Board(side).Grid(true),
 		Enemy:      m.Board(side.Other()).Grid(false),
 		EnemyFull:  m.Board(side.Other()).Grid(true),
+		YouHull:    m.Board(side).HullGrid(),
+		EnemyHull:  m.Board(side.Other()).HullGrid(),
 		YourTurn:   m.Phase() == game.MatchBattle && m.Turn() == side,
 		YouPlaced:  m.Placed(side),
 		OppPlaced:  m.Placed(side.Other()),
@@ -127,6 +133,10 @@ func (r *Room) Snapshot(side game.Side) Snapshot {
 	}
 	if opp != nil {
 		snap.OppName = opp.Name
+		if opp.bot != nil {
+			snap.OppIsBot = true
+			snap.OppTier = r.Tier
+		}
 	}
 	snap.YourScore = r.score[side]
 	snap.OppScore = r.score[side.Other()]

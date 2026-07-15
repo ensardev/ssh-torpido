@@ -104,6 +104,9 @@ type Strings struct {
 	RematchHelp       string
 	RematchWaitingFmt string // arg: oppName
 	OppLeft           string
+
+	// bot difficulty names
+	BotRookie, BotAdmiral, BotWolf string
 }
 
 var dicts = map[Lang]Strings{
@@ -210,6 +213,10 @@ var dicts = map[Lang]Strings{
 		RematchHelp:       "r rematch · q leave",
 		RematchWaitingFmt: "Waiting for %s to accept the rematch…",
 		OppLeft:           "Your opponent left.",
+
+		BotRookie:  "Rookie",
+		BotAdmiral: "Admiral",
+		BotWolf:    "Sea Wolf",
 	},
 
 	TR: {
@@ -315,5 +322,9 @@ var dicts = map[Lang]Strings{
 		RematchHelp:       "r rövanş · q çık",
 		RematchWaitingFmt: "%s'in rövanşı kabul etmesi bekleniyor…",
 		OppLeft:           "Rakibin ayrıldı.",
+
+		BotRookie:  "Acemi Er",
+		BotAdmiral: "Amiral",
+		BotWolf:    "Deniz Kurdu",
 	},
 }

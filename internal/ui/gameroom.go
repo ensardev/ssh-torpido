@@ -31,6 +31,16 @@ func boomTick() tea.Cmd {
 	return tea.Tick(boomFrameDur, func(time.Time) tea.Msg { return boomTickMsg{} })
 }
 
+// waterFrameDur is how often the sea waves roll forward.
+const waterFrameDur = 700 * time.Millisecond
+
+// waterTickMsg advances the gentle water animation.
+type waterTickMsg struct{}
+
+func waterTick() tea.Cmd {
+	return tea.Tick(waterFrameDur, func(time.Time) tea.Msg { return waterTickMsg{} })
+}
+
 // gamePhase is which screen of a match the player is looking at.
 type gamePhase int
 
@@ -83,6 +93,7 @@ type gameModel struct {
 	message    string
 	boom       *boomOverlay
 	curMatchNo int
+	waterFrame int
 
 	width, height int
 }
@@ -105,7 +116,7 @@ func newGameModel(room *lobby.Room, seat *lobby.Seat, t i18n.Strings, r *lipglos
 	return m
 }
 
-func (m gameModel) Init() tea.Cmd { return listenRoom(m.seat) }
+func (m gameModel) Init() tea.Cmd { return tea.Batch(listenRoom(m.seat), waterTick()) }
 
 // refresh pulls a fresh snapshot and moves to the matching screen. It returns
 // true when a new hit just landed, so the caller can start the explosion.
@@ -172,6 +183,9 @@ func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case roomUpdateMsg:
 		boomed := m.refresh()
 		return m, tea.Batch(listenRoom(m.seat), m.maybeBotMove(), m.boomCmd(boomed))
+	case waterTickMsg:
+		m.waterFrame++
+		return m, waterTick()
 	case boomTickMsg:
 		if m.boom != nil {
 			m.boom.Frame++

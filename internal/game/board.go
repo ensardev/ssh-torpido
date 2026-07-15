@@ -144,6 +144,54 @@ func (b *Board) AllSunk() bool {
 	return true
 }
 
+// Hull describes how a ship square should be drawn so the fleet looks like
+// pointed vessels instead of plain blocks.
+type Hull int
+
+const (
+	HullNone   Hull = iota
+	HullBowH        // horizontal ship, left end
+	HullSternH      // horizontal ship, right end
+	HullMidH        // horizontal ship, middle
+	HullBowV        // vertical ship, top end
+	HullSternV      // vertical ship, bottom end
+	HullMidV        // vertical ship, middle
+	HullSingle      // one-square ship
+)
+
+// HullGrid returns, for every square, which hull part sits there (HullNone if
+// none). The UI uses this to draw ships with pointed bows and sterns.
+func (b *Board) HullGrid() [BoardSize][BoardSize]Hull {
+	var g [BoardSize][BoardSize]Hull
+	for _, s := range b.Ships {
+		n := len(s.Coords)
+		horizontal := n > 1 && s.Coords[0].Row == s.Coords[1].Row
+		for i, c := range s.Coords {
+			g[c.Row][c.Col] = hullPart(i, n, horizontal)
+		}
+	}
+	return g
+}
+
+func hullPart(idx, n int, horizontal bool) Hull {
+	switch {
+	case n == 1:
+		return HullSingle
+	case horizontal && idx == 0:
+		return HullBowH
+	case horizontal && idx == n-1:
+		return HullSternH
+	case horizontal:
+		return HullMidH
+	case idx == 0:
+		return HullBowV
+	case idx == n-1:
+		return HullSternV
+	default:
+		return HullMidV
+	}
+}
+
 // Grid returns a value copy of the whole board as cell states, so the UI can
 // render it without touching the live board (important once a board is shared
 // between goroutines). revealShips has the same meaning as in StateAt.

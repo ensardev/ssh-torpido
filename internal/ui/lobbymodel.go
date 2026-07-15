@@ -292,7 +292,7 @@ func (m lobbyModel) View() string {
 		if info.Kind == lobby.BotRoom {
 			line = fmt.Sprintf("%s %-12s %s",
 				s.tierStyle(info.Tier).Render("●"),
-				info.HostName,
+				botName(m.t, info.Tier),
 				s.dim.Render(m.t.LBotWaiting))
 		} else {
 			lock := ""

@@ -11,7 +11,8 @@ var explosionGlyphs = []string{"✦", "✸", "✺", "✹"}
 // from that session's renderer (see server.MakeRenderer) rather than one shared
 // global — otherwise the game renders with the server's colors, not yours.
 type styles struct {
-	water, ship, hit, miss, sunk      lipgloss.Style
+	water, waterWave                  lipgloss.Style
+	ship, shipHull, hit, miss, sunk   lipgloss.Style
 	previewOK, previewBad, aim        lipgloss.Style
 	logo, tag, dim, help, box         lipgloss.Style
 	badgeYou, badgeFoe                lipgloss.Style
@@ -31,8 +32,10 @@ func newStyles(r *lipgloss.Renderer) styles {
 	c := func(code string) lipgloss.Color { return lipgloss.Color(code) }
 	return styles{
 		// Board cells: solid 2-wide blocks so ships and the sea look continuous.
-		water: r.NewStyle().Background(c("17")).Foreground(c("25")),   // sea
-		ship:  r.NewStyle().Background(c("22")),                       // your hull
+		water:     r.NewStyle().Background(c("17")).Foreground(c("25")), // sea
+		waterWave: r.NewStyle().Background(c("17")).Foreground(c("45")), // wave crest
+		ship:      r.NewStyle().Background(c("22")),                     // solid hull fallback
+		shipHull:  r.NewStyle().Background(c("17")).Foreground(c("42")).Bold(true), // ship on the sea
 		hit:   r.NewStyle().Background(c("160")).Foreground(c("231")), // struck
 		miss:  r.NewStyle().Background(c("17")).Foreground(c("252")),  // splash on sea
 		sunk:  r.NewStyle().Background(c("52")).Foreground(c("231")),  // sunk hull
