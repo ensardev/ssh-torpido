@@ -47,13 +47,14 @@ func (m welcomeModel) renderTorpedo(width int) string {
 			line[p] = ch
 		}
 	}
-	// Dim water dots with a bright torpedo where it currently sits.
+	// A continuous navy "sea" bar with a glowing torpedo gliding across it.
+	torp := m.renderer.NewStyle().Background(lipgloss.Color("17")).Foreground(lipgloss.Color("214")).Bold(true)
 	var b strings.Builder
 	for i, ch := range line {
 		if i >= start && i < start+len(sprite) {
-			b.WriteString(m.styles.tierAdmiral.Render(string(ch)))
+			b.WriteString(torp.Render(string(ch)))
 		} else {
-			b.WriteString(m.styles.dim.Render(string(ch)))
+			b.WriteString(m.styles.water.Render(string(ch)))
 		}
 	}
 	return b.String()
