@@ -110,8 +110,7 @@ func (m welcomeModel) viewLeaderboard() string {
 				marker, nickStyle = s.logo.Render(" ▸ "), s.rosterDone
 			}
 			rows = append(rows, fmt.Sprintf("%s%2d.  %s  %s",
-				marker, i+1, nickStyle.Render(fmt.Sprintf("%-16s", r.Nick)),
-				s.tag.Render(fmt.Sprintf("%d-%d", r.Wins, r.Losses))))
+				marker, i+1, nickStyle.Render(fmt.Sprintf("%-16s", r.Nick)), s.wl(r.Wins, r.Losses)))
 		}
 	}
 	if len(rows) == 0 {
@@ -121,7 +120,7 @@ func (m welcomeModel) viewLeaderboard() string {
 	yourRank := ""
 	if m.store != nil && m.fp != "" {
 		if rec, ok := m.store.Get(m.fp); ok {
-			yourRank = s.tag.Render(fmt.Sprintf(m.t.WLbYouRankFmt, m.store.Rank(m.fp), rec.Wins, rec.Losses))
+			yourRank = s.tag.Render(fmt.Sprintf(m.t.WLbYouRankFmt, m.store.Rank(m.fp))) + s.wl(rec.Wins, rec.Losses)
 		}
 	}
 
@@ -134,7 +133,7 @@ func (m welcomeModel) viewLeaderboard() string {
 		"",
 		s.help.Render(m.t.WInfoBack),
 	)
-	return screen(content)
+	return s.framed(m.width, content)
 }
 
 func (m welcomeModel) viewNickname() string {
@@ -150,18 +149,17 @@ func (m welcomeModel) viewNickname() string {
 		"",
 		notice+s.help.Render(m.t.WNickHelp),
 	)
-	return screen(content)
+	return s.framed(m.width, content)
 }
 
 func (m welcomeModel) viewInfo(title, body string) string {
 	s := m.styles
-	head := s.logo.Render(title)
 	content := lipgloss.JoinVertical(lipgloss.Left,
-		head,
+		s.logo.Render(title),
 		"",
 		body,
 		"",
 		s.help.Render(m.t.WInfoBack),
 	)
-	return screen(content)
+	return s.framed(m.width, content)
 }

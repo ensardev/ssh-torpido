@@ -46,6 +46,7 @@ type lobbyModel struct {
 	rooms  []lobby.RoomInfo
 	cursor int
 	notice string
+	width  int
 
 	mode  lobbyMode
 	input string
@@ -104,6 +105,9 @@ func (m lobbyModel) newSeat() *lobby.Seat {
 
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		return m, nil
 	case lobbyTickMsg:
 		m.refresh()
 		return m, lobbyTick()
@@ -271,13 +275,13 @@ func (m lobbyModel) View() string {
 			if host == "" {
 				host = m.t.LPlayer
 			}
-			record := ""
+			namePart := s.dim.Render(host)
 			if info.HostWins+info.HostLosses > 0 {
-				record = s.tag.Render(fmt.Sprintf(" (%d/%d)", info.HostWins, info.HostLosses))
+				namePart += s.record(info.HostWins, info.HostLosses)
 			}
-			line = fmt.Sprintf("%s⚔ %s %s%s",
-				lock, s.logo.Render(info.Code),
-				s.dim.Render(fmt.Sprintf(m.t.LHumanWaitingFmt, host, info.Players)), record)
+			line = fmt.Sprintf("%s⚔ %s %s %s",
+				lock, s.logo.Render(info.Code), namePart,
+				s.dim.Render(fmt.Sprintf(m.t.LHumanWaitingFmt, info.Players)))
 		}
 		if i == m.cursor {
 			line = s.rosterNow.Render("▸ " + strings.TrimPrefix(line, " "))
@@ -312,5 +316,5 @@ func (m lobbyModel) View() string {
 		"",
 		notice+footer,
 	)
-	return screen(body)
+	return s.framed(m.width, body)
 }

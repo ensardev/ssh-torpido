@@ -18,6 +18,18 @@ func coordName(c game.Coord) string {
 	return fmt.Sprintf("%c%d", 'A'+c.Col, c.Row+1)
 }
 
+// record renders a win/loss tally to sit right after a name, wins green and
+// losses red, e.g. "(1/2)".
+func (s styles) record(wins, losses int) string {
+	return s.dim.Render("(") + s.logGood.Render(fmt.Sprintf("%d", wins)) +
+		s.dim.Render("/") + s.logHit.Render(fmt.Sprintf("%d", losses)) + s.dim.Render(")")
+}
+
+// wl renders a colored "W-L" for tables (wins green, losses red).
+func (s styles) wl(wins, losses int) string {
+	return s.logGood.Render(fmt.Sprintf("%d", wins)) + s.dim.Render("-") + s.logHit.Render(fmt.Sprintf("%d", losses))
+}
+
 // cellBlock renders one square as a 2-column colored block.
 func (s styles) cellBlock(c game.Cell) string {
 	switch c {

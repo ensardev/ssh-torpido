@@ -36,7 +36,7 @@ func (m gameModel) vsLine() string {
 	line := m.styles.header(m.t.Tagline) + "  " +
 		m.styles.tag.Render("· "+fmt.Sprintf(m.t.VsFmt, m.opponentName()))
 	if m.snap.YourScore+m.snap.OppScore > 0 {
-		line += "  " + m.styles.logo.Render(fmt.Sprintf("%d–%d", m.snap.YourScore, m.snap.OppScore))
+		line += "  " + m.styles.wl(m.snap.YourScore, m.snap.OppScore)
 	}
 	return line
 }
@@ -224,7 +224,7 @@ func (m gameModel) viewOver() string {
 		banner = s.lose.Render(m.t.Defeat)
 		msg = fmt.Sprintf(m.t.LoseMsgFmt, m.opponentName())
 	}
-	score := s.logo.Render(fmt.Sprintf(m.t.ScoreFmt, m.snap.YourScore, m.snap.OppScore, m.opponentName()))
+	score := s.wl(m.snap.YourScore, m.snap.OppScore) + "  " + s.tag.Render(fmt.Sprintf(m.t.VsFmt, m.opponentName()))
 
 	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil))
 	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.EnemyFull, nil, nil, false, nil))
