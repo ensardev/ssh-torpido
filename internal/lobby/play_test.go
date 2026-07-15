@@ -21,7 +21,7 @@ func placeStandardFleet(r *Room, side game.Side) {
 }
 
 func botRoomWithHuman() (*Room, *Seat) {
-	r := &Room{Kind: BotRoom, Tier: game.Admiral, match: game.NewMatch()}
+	r := &Room{Kind: BotRoom, Tier: game.Admiral, match: game.NewMatch(), matchNo: 1}
 	r.seats[1] = &Seat{Name: "Amiral", bot: game.NewBot(game.Admiral, 1)}
 	game.RandomPlacement(r.match.Board(game.SideB), game.StandardFleet, rand.New(rand.NewSource(1)))
 	r.match.FinishPlacing(game.SideB)
@@ -31,7 +31,7 @@ func botRoomWithHuman() (*Room, *Seat) {
 }
 
 func humanRoomWithTwo() (*Room, *Seat, *Seat) {
-	r := &Room{Kind: HumanRoom, match: game.NewMatch()}
+	r := &Room{Kind: HumanRoom, match: game.NewMatch(), matchNo: 1}
 	a, b := NewHumanSeat("Ali"), NewHumanSeat("Veli")
 	r.seats[0], r.seats[1] = a, b
 	return r, a, b

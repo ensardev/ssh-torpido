@@ -79,9 +79,10 @@ type gameModel struct {
 	orientation game.Orientation
 
 	// battle state
-	aim     game.Coord
-	message string
-	boom    *boomOverlay
+	aim        game.Coord
+	message    string
+	boom       *boomOverlay
+	curMatchNo int
 
 	width, height int
 }
@@ -122,6 +123,19 @@ func (m *gameModel) refresh() bool {
 		m.phase = gamePlaceWait
 	default:
 		m.phase = gamePlacing
+	}
+
+	// A rematch bumps the match number: reset per-match local state.
+	if m.snap.MatchNo != m.curMatchNo {
+		m.curMatchNo = m.snap.MatchNo
+		m.placeIndex = 0
+		m.cursor = game.Coord{}
+		m.orientation = game.Horizontal
+		m.aim = game.Coord{}
+		m.message = ""
+		m.boom = nil
+		m.clampCursor()
+		return false
 	}
 
 	if m.snap.Events > prev && len(m.snap.Log) > 0 {
@@ -192,7 +206,14 @@ func (m gameModel) handleKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case gameOver:
 		switch msg.String() {
-		case "q", "enter", "r":
+		case "q", "esc":
+			return m, leaveGame
+		case "r", "enter", " ":
+			if m.snap.OppPresent {
+				m.room.RequestRematch(m.side)
+				m.refresh()
+				return m, nil
+			}
 			return m, leaveGame
 		}
 	}

@@ -1,6 +1,11 @@
 package lobby
 
-import "github.com/ensardev/ssh-torpido/internal/game"
+import (
+	"math/rand"
+	"time"
+
+	"github.com/ensardev/ssh-torpido/internal/game"
+)
 
 // This file is how the UI drives a match: every action goes through the room so
 // the shared match stays consistent and the opponent is woken to re-render.
@@ -21,6 +26,11 @@ type Snapshot struct {
 	YouWon     bool
 	Events     int          // total shots fired so far (for detecting new hits)
 	Log        []game.Event // the most recent shots, oldest first
+	YourScore  int          // wins across rematches, this player
+	OppScore   int          // wins across rematches, the opponent
+	RematchYou bool         // you asked for a rematch
+	RematchOpp bool         // the opponent asked for a rematch
+	MatchNo    int          // increments each rematch, so the UI can reset
 }
 
 // logTail is how many recent shots a snapshot carries for the battle log.
@@ -69,6 +79,7 @@ func (r *Room) Fire(side game.Side, c game.Coord) (game.FireResult, *game.Ship) 
 	defer r.mu.Unlock()
 	res, ship := r.match.Fire(side, c)
 	if res != game.FireInvalid {
+		r.scoreIfEndedLocked()
 		r.notifyLocked()
 	}
 	return res, ship
@@ -90,6 +101,7 @@ func (r *Room) PlayBotTurn() bool {
 	shot := seat.bot.NextShot()
 	res, _ := r.match.Fire(turn, shot)
 	seat.bot.Report(shot, res)
+	r.scoreIfEndedLocked()
 	r.notifyLocked()
 	return res != game.FireInvalid
 }
@@ -116,6 +128,11 @@ func (r *Room) Snapshot(side game.Side) Snapshot {
 	if opp != nil {
 		snap.OppName = opp.Name
 	}
+	snap.YourScore = r.score[side]
+	snap.OppScore = r.score[side.Other()]
+	snap.RematchYou = r.rematchWant[side]
+	snap.RematchOpp = r.rematchWant[side.Other()]
+	snap.MatchNo = r.matchNo
 	all := m.Events()
 	snap.Events = len(all)
 	if len(all) > logTail {
@@ -123,4 +140,50 @@ func (r *Room) Snapshot(side game.Side) Snapshot {
 	}
 	snap.Log = append([]game.Event(nil), all...) // copy so the UI never reads the live slice
 	return snap
+}
+
+// scoreIfEndedLocked counts a win the first time the current match ends. Assumes
+// the room's mutex is held.
+func (r *Room) scoreIfEndedLocked() {
+	if r.curScored {
+		return
+	}
+	if w, over := r.match.Winner(); over {
+		r.score[w]++
+		r.curScored = true
+	}
+}
+
+// RequestRematch records that side wants to play again. A fresh match starts once
+// both sides agree (a bot opponent always agrees).
+func (r *Room) RequestRematch(side game.Side) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.match.Phase() != game.MatchOver {
+		return
+	}
+	opp := r.seats[side.Other()]
+	if opp == nil {
+		return // no one left to rematch
+	}
+	r.rematchWant[side] = true
+	botOpp := opp.bot != nil
+	if botOpp || r.rematchWant[side.Other()] {
+		r.resetMatchLocked()
+	}
+	r.notifyLocked()
+}
+
+// resetMatchLocked starts a fresh match, keeping the score. Assumes the room's
+// mutex is held.
+func (r *Room) resetMatchLocked() {
+	r.match = game.NewMatch()
+	r.rematchWant = [2]bool{}
+	r.curScored = false
+	r.matchNo++
+	if r.Kind == BotRoom && r.seats[1] != nil {
+		r.seats[1].bot = game.NewBot(r.Tier, time.Now().UnixNano())
+		game.RandomPlacement(r.match.Board(game.SideB), game.StandardFleet, rand.New(rand.NewSource(time.Now().UnixNano())))
+		r.match.FinishPlacing(game.SideB)
+	}
 }

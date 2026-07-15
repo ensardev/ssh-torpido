@@ -58,6 +58,7 @@ func (l *Lobby) CreateRoom(creator *Seat, password string, private bool) *Room {
 		Password: password,
 		Private:  private,
 		match:    game.NewMatch(),
+		matchNo:  1,
 	}
 	r.seats[0] = creator
 	l.rooms[code] = r
@@ -116,7 +117,7 @@ func (l *Lobby) QuickMatch(joiner *Seat) *Room {
 	}
 
 	code := l.uniqueCodeLocked()
-	r := &Room{Code: code, Kind: HumanRoom, match: game.NewMatch()}
+	r := &Room{Code: code, Kind: HumanRoom, match: game.NewMatch(), matchNo: 1}
 	r.seats[0] = joiner
 	l.rooms[code] = r
 	return r
@@ -140,6 +141,7 @@ func (l *Lobby) Leave(r *Room, seat *Seat) {
 		if _, over := r.match.Winner(); !over {
 			r.match.Resign(game.Side(leaver)) // opponent wins the forfeit
 		}
+		r.scoreIfEndedLocked()
 	}
 	humans := r.humanCountLocked()
 	isBot := r.Kind == BotRoom
@@ -208,7 +210,7 @@ func (l *Lobby) reconcileLocked() {
 // fleet, waiting for a human to take the open seat. Assumes l.mu is held.
 func (l *Lobby) createBotRoomLocked(tier game.Difficulty) *Room {
 	code := l.uniqueCodeLocked()
-	r := &Room{Code: code, Kind: BotRoom, Tier: tier, match: game.NewMatch()}
+	r := &Room{Code: code, Kind: BotRoom, Tier: tier, match: game.NewMatch(), matchNo: 1}
 	r.seats[1] = &Seat{Name: tier.Name(), bot: game.NewBot(tier, l.rng.Int63())}
 	game.RandomPlacement(r.match.Board(game.SideB), game.StandardFleet, rand.New(rand.NewSource(l.rng.Int63())))
 	r.match.FinishPlacing(game.SideB)

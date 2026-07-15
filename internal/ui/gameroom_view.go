@@ -33,8 +33,12 @@ func (m gameModel) opponentName() string {
 }
 
 func (m gameModel) vsLine() string {
-	return m.styles.header(m.t.Tagline) + "  " +
+	line := m.styles.header(m.t.Tagline) + "  " +
 		m.styles.tag.Render("· "+fmt.Sprintf(m.t.VsFmt, m.opponentName()))
+	if m.snap.YourScore+m.snap.OppScore > 0 {
+		line += "  " + m.styles.logo.Render(fmt.Sprintf("%d–%d", m.snap.YourScore, m.snap.OppScore))
+	}
+	return line
 }
 
 func (m gameModel) legend() string {
@@ -220,17 +224,30 @@ func (m gameModel) viewOver() string {
 		banner = s.lose.Render(m.t.Defeat)
 		msg = fmt.Sprintf(m.t.LoseMsgFmt, m.opponentName())
 	}
+	score := s.logo.Render(fmt.Sprintf(m.t.ScoreFmt, m.snap.YourScore, m.snap.OppScore, m.opponentName()))
+
 	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil))
 	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.EnemyFull, nil, nil, false, nil))
 	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
 
+	var footer string
+	switch {
+	case !m.snap.OppPresent:
+		footer = s.tag.Render(m.t.OppLeft) + "\n" + s.help.Render(m.t.BackHelp)
+	case m.snap.RematchYou:
+		footer = s.tag.Render(fmt.Sprintf(m.t.RematchWaitingFmt, m.opponentName()))
+	default:
+		footer = s.help.Render(m.t.RematchHelp)
+	}
+
 	content := lipgloss.JoinVertical(lipgloss.Center,
 		banner,
 		s.dim.Render(msg),
+		score,
 		"",
 		boards,
 		"",
-		s.help.Render(m.t.OverHelp),
+		footer,
 	)
 	return s.framed(m.width, content)
 }

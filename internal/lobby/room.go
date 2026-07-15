@@ -48,9 +48,13 @@ type Room struct {
 	Password string          // "" = open (HumanRoom only)
 	Private  bool            // not listed publicly (HumanRoom only)
 
-	mu    sync.Mutex
-	match *game.Match
-	seats [2]*Seat
+	mu          sync.Mutex
+	match       *game.Match
+	seats       [2]*Seat
+	score       [2]int  // wins per side across rematches
+	rematchWant [2]bool // which sides asked for a rematch
+	curScored   bool    // has the current finished match been counted yet?
+	matchNo     int     // increments each rematch, so the UI can reset locals
 }
 
 // --- helpers below assume the room's mutex is held ---

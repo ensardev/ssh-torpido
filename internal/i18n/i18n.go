@@ -90,6 +90,12 @@ type Strings struct {
 	LogYouMissFmt, LogYouHitFmt, LogYouSunkFmt string // arg: coord / coord / ship
 	LogOppMissFmt, LogOppHitFmt           string // args: name, coord
 	LogOppSunkFmt                         string // args: name, ship
+
+	// score & rematch
+	ScoreFmt           string // args: yourScore, oppScore, oppName
+	RematchHelp        string
+	RematchWaitingFmt  string // arg: oppName
+	OppLeft            string
 }
 
 var dicts = map[Lang]Strings{
@@ -177,6 +183,11 @@ var dicts = map[Lang]Strings{
 		LogOppMissFmt: "%s fired at %s — miss",
 		LogOppHitFmt:  "%s hit you at %s",
 		LogOppSunkFmt: "%s sank your %s",
+
+		ScoreFmt:          "You %d — %d %s",
+		RematchHelp:       "r rematch · q leave",
+		RematchWaitingFmt: "Waiting for %s to accept the rematch…",
+		OppLeft:           "Your opponent left.",
 	},
 
 	TR: {
@@ -263,5 +274,10 @@ var dicts = map[Lang]Strings{
 		LogOppMissFmt: "%s, %s'e ateş etti — ıska",
 		LogOppHitFmt:  "%s seni %s'te vurdu",
 		LogOppSunkFmt: "%s senin %s gemini batırdı",
+
+		ScoreFmt:          "Sen %d — %d %s",
+		RematchHelp:       "r rövanş · q çık",
+		RematchWaitingFmt: "%s'in rövanşı kabul etmesi bekleniyor…",
+		OppLeft:           "Rakibin ayrıldı.",
 	},
 }
