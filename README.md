@@ -16,6 +16,8 @@ No install. No signup. No mouse. Just you, a fleet, and questionable tactics.
 ·
 [**torpido.dev**](https://torpido.dev)
 
+![torpido — battleship over SSH](docs/demo.gif)
+
 </div>
 
 ## Play
