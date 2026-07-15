@@ -47,20 +47,22 @@ type Model struct {
 	// game over
 	playerWon bool
 
-	rng      *rand.Rand
-	renderer *lipgloss.Renderer
-	styles   styles
+	difficulty game.Difficulty
+	rng        *rand.Rand
+	renderer   *lipgloss.Renderer
+	styles     styles
 }
 
-// NewModel returns a fresh game sitting on the placement screen. The renderer
-// carries the connected terminal's color profile; pass lipgloss.DefaultRenderer()
-// for local play or a per-session renderer for an SSH connection.
-func NewModel(renderer *lipgloss.Renderer) Model {
+// NewBotGame returns a fresh game against a bot of the given difficulty, sitting
+// on the placement screen. The renderer carries the connected terminal's color
+// profile (lipgloss.DefaultRenderer() locally, or a per-session one over SSH).
+func NewBotGame(difficulty game.Difficulty, renderer *lipgloss.Renderer) Model {
 	m := Model{
 		phase:       phasePlacement,
 		player:      game.NewBoard(),
 		fleet:       game.StandardFleet,
 		orientation: game.Horizontal,
+		difficulty:  difficulty,
 		rng:         rand.New(rand.NewSource(time.Now().UnixNano())),
 		renderer:    renderer,
 		styles:      newStyles(renderer),
@@ -118,8 +120,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m Model) updatePlacement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "ctrl+c":
 		return m, tea.Quit
+	case "q":
+		return m, leaveGame
 	case "up", "k":
 		m.cursor.Row--
 		m.clampCursor()
@@ -159,7 +163,7 @@ func (m Model) updatePlacement(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 func (m *Model) startBattle() {
 	m.enemy = game.NewBoard()
 	game.RandomPlacement(m.enemy, m.fleet, m.rng)
-	m.bot = game.NewBot(game.Admiral, time.Now().UnixNano())
+	m.bot = game.NewBot(m.difficulty, time.Now().UnixNano())
 	m.phase = phaseBattle
 	m.aim = game.Coord{}
 	m.message = "Muharebe başlasın! İlk atışını yap."
@@ -167,15 +171,20 @@ func (m *Model) startBattle() {
 
 func (m Model) updateBattle(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if m.waiting {
-		if s := msg.String(); s == "ctrl+c" || s == "q" {
+		switch msg.String() {
+		case "ctrl+c":
 			return m, tea.Quit
+		case "q":
+			return m, leaveGame
 		}
 		return m, nil
 	}
 
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "ctrl+c":
 		return m, tea.Quit
+	case "q":
+		return m, leaveGame
 	case "up", "k":
 		if m.aim.Row > 0 {
 			m.aim.Row--
@@ -247,10 +256,10 @@ func (m Model) botFire() (tea.Model, tea.Cmd) {
 
 func (m Model) updateGameOver(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
-	case "ctrl+c", "q":
+	case "ctrl+c":
 		return m, tea.Quit
-	case "r", "enter":
-		return NewModel(m.renderer), nil
+	case "q", "r", "enter":
+		return m, leaveGame
 	}
 	return m, nil
 }

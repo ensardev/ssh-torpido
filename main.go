@@ -6,6 +6,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ensardev/torpido/internal/lobby"
 	"github.com/ensardev/torpido/internal/server"
 	"github.com/ensardev/torpido/internal/ui"
 )
@@ -24,7 +25,10 @@ func main() {
 		return
 	}
 
-	p := tea.NewProgram(ui.NewModel(lipgloss.DefaultRenderer()), tea.WithAltScreen())
+	// Local play runs its own in-process lobby, so `go run .` shows the same
+	// lobby-and-bots experience as connecting over SSH.
+	lb := lobby.New()
+	p := tea.NewProgram(ui.NewRoot(lb, "sen", lipgloss.DefaultRenderer()), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "torpido crashed:", err)
 		os.Exit(1)

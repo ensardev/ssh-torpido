@@ -14,6 +14,7 @@ type styles struct {
 	badgeYou, badgeFoe                lipgloss.Style
 	rosterDone, rosterNow, rosterTodo lipgloss.Style
 	win, lose                         lipgloss.Style
+	tierRookie, tierAdmiral, tierWolf lipgloss.Style
 }
 
 // newStyles builds the style set from a renderer. Colors are ANSI-256 codes.
@@ -46,5 +47,9 @@ func newStyles(r *lipgloss.Renderer) styles {
 
 		win:  r.NewStyle().Bold(true).Foreground(c("42")),
 		lose: r.NewStyle().Bold(true).Foreground(c("196")),
+
+		tierRookie:  r.NewStyle().Foreground(c("42")),  // green
+		tierAdmiral: r.NewStyle().Foreground(c("214")), // amber
+		tierWolf:    r.NewStyle().Foreground(c("196")), // red
 	}
 }

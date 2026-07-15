@@ -130,7 +130,7 @@ func (m Model) viewPlacement() string {
 	}
 
 	help := s.help.Render(fmt.Sprintf(
-		"ok tuşları/hjkl taşı · r döndür (%s) · enter yerleştir · q çık", orient))
+		"ok tuşları/hjkl taşı · r döndür (%s) · enter yerleştir · q lobiye dön", orient))
 
 	body := lipgloss.JoinVertical(lipgloss.Left,
 		s.header(),
@@ -163,7 +163,7 @@ func (m Model) viewBattle() string {
 	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left,
-		s.header(),
+		s.header()+"  "+s.tag.Render("· "+m.difficulty.Name()+"'e karşı"),
 		"",
 		turn+"   "+m.message,
 		"",
@@ -171,7 +171,7 @@ func (m Model) viewBattle() string {
 		"",
 		s.legend(),
 		"",
-		s.help.Render("ok tuşları/hjkl nişan al · enter ateş · q çık"),
+		s.help.Render("ok tuşları/hjkl nişan al · enter ateş · q lobiye dön"),
 	)
 	return lipgloss.NewStyle().Padding(1, 2).Render(body)
 }
@@ -193,7 +193,7 @@ func (m Model) viewGameOver() string {
 		"",
 		boards,
 		"",
-		s.help.Render("r/enter tekrar oyna · q çık"),
+		s.help.Render("enter/q lobiye dön"),
 	)
 	return lipgloss.NewStyle().Padding(1, 2).Render(body)
 }

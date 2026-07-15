@@ -23,6 +23,7 @@ import (
 	bm "github.com/charmbracelet/wish/bubbletea"
 	"github.com/charmbracelet/wish/logging"
 
+	"github.com/ensardev/torpido/internal/lobby"
 	"github.com/ensardev/torpido/internal/ui"
 )
 
@@ -38,14 +39,17 @@ func Run(addr string) error {
 		return err
 	}
 
+	// One lobby is shared by every connection, so players meet in the same rooms.
+	lb := lobby.New()
+
 	srv, err := wish.NewServer(
 		wish.WithAddress(addr),
 		wish.WithHostKeyPath(hostKeyPath),
 		wish.WithMiddleware(
 			// Order matters: middleware runs bottom-to-top on the way in.
-			bm.Middleware(teaHandler), // run the Bubble Tea game
-			activeterm.Middleware(),   // reject connections without a real terminal
-			logging.Middleware(),      // log who connects
+			bm.Middleware(teaHandler(lb)), // run the Bubble Tea app
+			activeterm.Middleware(),       // reject connections without a real terminal
+			logging.Middleware(),          // log who connects
 		),
 	)
 	if err != nil {
@@ -69,12 +73,22 @@ func Run(addr string) error {
 	return srv.Shutdown(ctx)
 }
 
-// teaHandler builds a fresh game for each incoming SSH session. It gives the
-// Model a renderer bound to *this* session's terminal, so colors match the
+// teaHandler builds the lobby-backed app for each incoming SSH session. It gives
+// the UI a renderer bound to *this* session's terminal, so colors match the
 // player's terminal instead of the server's.
-func teaHandler(s ssh.Session) (tea.Model, []tea.ProgramOption) {
-	renderer := bm.MakeRenderer(s)
-	return ui.NewModel(renderer), []tea.ProgramOption{tea.WithAltScreen()}
+func teaHandler(lb *lobby.Lobby) bm.Handler {
+	return func(s ssh.Session) (tea.Model, []tea.ProgramOption) {
+		renderer := bm.MakeRenderer(s)
+		return ui.NewRoot(lb, playerName(s), renderer), []tea.ProgramOption{tea.WithAltScreen()}
+	}
+}
+
+// playerName is the display name for a connection, taken from the SSH username.
+func playerName(s ssh.Session) string {
+	if u := s.User(); u != "" && u != "root" {
+		return u
+	}
+	return "denizci"
 }
 
 // port pulls the port out of a listen address for the friendly log line.
