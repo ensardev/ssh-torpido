@@ -2,67 +2,70 @@
 
 # 🚢 torpido
 
-**Battleship. In your terminal. Over SSH.**
+### Battleship you play by typing `ssh torpido.dev`.
 
-```
-ssh torpido.dev
-```
-
-No install. No signup. No mouse. Just you, a fleet, and questionable tactics.
+![torpido — battleship over SSH](docs/demo.gif)
 
 [![Go](https://img.shields.io/badge/Go-1.26-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff69b4)](https://github.com/charmbracelet/bubbletea)
-·
+&nbsp;·&nbsp;
 [**torpido.dev**](https://torpido.dev)
-
-![torpido — battleship over SSH](docs/demo.gif)
 
 </div>
 
-## Play
+No download. No account. No browser. Open a terminal, run one command, and you land
+straight in a lobby — bots on tap, or a room code to send a friend.
 
 ```
 ssh torpido.dev
 ```
 
-That's the whole thing — you land straight in the lobby. From there:
+Your SSH key is your identity, so your record and nickname come back with you every
+time. Nothing to sign up for, nothing to remember.
 
-- **Warm up on a bot** — three difficulties waiting around the clock.
-- **1v1 a friend** — create a room, text them the 4-letter code, settle it.
-- **Quick match** — get paired with whoever's around.
+## Playing
 
-Your SSH key is your identity, so your wins, losses and nickname follow you back every time — no account, no password.
+- **A bot** to warm up — three of them, always around.
+- **A friend** — create a room, send the four-letter code, settle it 1v1.
+- **Quick match** — get thrown at whoever's online.
 
-## Controls
+```
+placing   arrows / hjkl to move   ·  r to rotate  ·  enter to drop
+firing    arrows / hjkl to aim    ·  enter to fire
+          q steps back a screen   ·  ctrl+c disconnects
+```
 
-| | |
-|---|---|
-| **Placing your fleet** | arrows / `hjkl` to move · `r` to rotate · `enter` to drop |
-| **Firing** | arrows / `hjkl` to aim · `enter` to fire |
-| **Anywhere** | `q` steps back a screen · `ctrl+c` disconnects |
+## What's inside
 
-## Features
+- **Real 1v1 over SSH** — invite codes, quick match, password rooms, rematches
+- **Three bots** — Rookie, Admiral, and the Sea Wolf, who hunts by probability and does not miss
+- **A leaderboard that follows your key** — top ten and your own rank, no signup
+- **Terminal, but with a pulse** — waves that roll, hits that explode, a battle log that scrolls
+- **English & Türkçe**
 
-- ⚔️ **Real 1v1 over SSH** — invite codes, quick match, optional password rooms, rematches
-- 🤖 **Three bot tiers** — Rookie (random), Admiral (hunt & target), Sea Wolf (probability-hunting, merciless)
-- 🏆 **Persistent stats & leaderboard** — win/loss keyed to your SSH key, top 10 + your rank
-- 💥 **Pure terminal juice** — rolling waves, exploding hits, a live battle log, pointed ships
-- 🌍 **English & Turkish**
+## How it's built
 
-## How it works
+One Go binary that speaks SSH. [Wish](https://github.com/charmbracelet/wish) hands each
+incoming session to a [Bubble Tea](https://github.com/charmbracelet/bubbletea) program, so
+the exact same code drives your terminal and every opponent's. The connection *is* the
+game — no client, no web app, nothing to install.
 
-torpido is a single Go binary that speaks SSH. [Wish](https://github.com/charmbracelet/wish) turns each incoming SSH session into a [Bubble Tea](https://github.com/charmbracelet/bubbletea) program, so the exact same code drives your local terminal and every remote player. No web server, no client to install — the SSH connection *is* the game.
-
-## Self-host
+## Run your own
 
 ```sh
 go install github.com/ensardev/ssh-torpido@latest
-ssh-torpido serve            # listens on :2222; set TORPIDO_ADDR=:22 to change
+ssh-torpido serve            # listens on :2222 — set TORPIDO_ADDR=:22 for the real thing
 ```
 
-To run it as `ssh yourdomain` (no port), put torpido on port 22 and move admin SSH aside. The [`deploy/`](deploy/) folder has a ready `systemd` unit and a one-command deploy script.
+[`deploy/`](deploy/) has a `systemd` unit and a one-command deploy script, plus notes on
+putting the game on port 22 so `ssh yourdomain` just works.
 
-## License
+## Why?
 
-MIT © [Ensar Akkuzey](https://ensar.dev)
+No grand reason. It was a fun thing to build and it's a fun thing to lose at. That's the
+whole pitch.
+
+---
+
+MIT · made by [ensar.dev](https://ensar.dev)
