@@ -14,6 +14,23 @@ import (
 // botDelay is the pause before a bot fires back, so its move is readable.
 const botDelay = 650 * time.Millisecond
 
+// boomFrameDur is how long each frame of the hit explosion shows.
+const boomFrameDur = 90 * time.Millisecond
+
+// boomOverlay is an in-progress explosion animation on a board square.
+type boomOverlay struct {
+	Coord   game.Coord
+	onEnemy bool // true if the blast is on the enemy board (you fired)
+	Frame   int
+}
+
+// boomTickMsg advances the explosion animation.
+type boomTickMsg struct{}
+
+func boomTick() tea.Cmd {
+	return tea.Tick(boomFrameDur, func(time.Time) tea.Msg { return boomTickMsg{} })
+}
+
 // gamePhase is which screen of a match the player is looking at.
 type gamePhase int
 
@@ -64,6 +81,9 @@ type gameModel struct {
 	// battle state
 	aim     game.Coord
 	message string
+	boom    *boomOverlay
+
+	width, height int
 }
 
 func newGameModel(room *lobby.Room, seat *lobby.Seat, t i18n.Strings, r *lipgloss.Renderer) gameModel {
@@ -86,8 +106,10 @@ func newGameModel(room *lobby.Room, seat *lobby.Seat, t i18n.Strings, r *lipglos
 
 func (m gameModel) Init() tea.Cmd { return listenRoom(m.seat) }
 
-// refresh pulls a fresh snapshot and moves to the matching screen.
-func (m *gameModel) refresh() {
+// refresh pulls a fresh snapshot and moves to the matching screen. It returns
+// true when a new hit just landed, so the caller can start the explosion.
+func (m *gameModel) refresh() bool {
+	prev := m.snap.Events
 	m.snap = m.room.Snapshot(m.side)
 	switch {
 	case m.snap.Over:
@@ -101,6 +123,23 @@ func (m *gameModel) refresh() {
 	default:
 		m.phase = gamePlacing
 	}
+
+	if m.snap.Events > prev && len(m.snap.Log) > 0 {
+		last := m.snap.Log[len(m.snap.Log)-1]
+		if last.Result == game.FireHit || last.Result == game.FireSunk {
+			m.boom = &boomOverlay{Coord: last.Coord, onEnemy: last.Side == m.side}
+			return true
+		}
+	}
+	return false
+}
+
+// boomCmd starts the explosion animation if one just began.
+func (m gameModel) boomCmd(started bool) tea.Cmd {
+	if started {
+		return boomTick()
+	}
+	return nil
 }
 
 // maybeBotMove schedules the bot's shot when it is the bot's turn.
@@ -113,9 +152,22 @@ func (m gameModel) maybeBotMove() tea.Cmd {
 
 func (m gameModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width, m.height = msg.Width, msg.Height
+		return m, nil
 	case roomUpdateMsg:
-		m.refresh()
-		return m, tea.Batch(listenRoom(m.seat), m.maybeBotMove())
+		boomed := m.refresh()
+		return m, tea.Batch(listenRoom(m.seat), m.maybeBotMove(), m.boomCmd(boomed))
+	case boomTickMsg:
+		if m.boom != nil {
+			m.boom.Frame++
+			if m.boom.Frame >= len(explosionGlyphs) {
+				m.boom = nil
+				return m, nil
+			}
+			return m, boomTick()
+		}
+		return m, nil
 	case botMoveMsg:
 		m.room.PlayBotTurn() // this notifies us, which drives the next refresh
 		return m, nil
@@ -185,6 +237,7 @@ func (m gameModel) keyPlacing(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.clampCursor()
 			return m, m.maybeBotMove()
 		}
+		return m, nil
 	}
 	return m, nil
 }
@@ -226,8 +279,8 @@ func (m gameModel) keyBattle(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		case game.FireSunk:
 			m.message = fmt.Sprintf(m.t.SunkFmt, ship.Name)
 		}
-		m.refresh()
-		return m, m.maybeBotMove()
+		boomed := m.refresh()
+		return m, tea.Batch(m.maybeBotMove(), m.boomCmd(boomed))
 	}
 	return m, nil
 }

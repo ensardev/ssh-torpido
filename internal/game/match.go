@@ -13,7 +13,19 @@ type Match struct {
 	phase     MatchPhase
 	winner    Side
 	hasWinner bool
+	events    []Event // every shot, in order, for the battle log
 }
+
+// Event is one shot recorded in the match log.
+type Event struct {
+	Side   Side       // who fired
+	Coord  Coord      // where
+	Result FireResult // what happened
+	Ship   string     // name of the ship hit/sunk, if any
+}
+
+// Events returns the full shot history in order.
+func (m *Match) Events() []Event { return m.events }
 
 // Side identifies one of the two players.
 type Side int
@@ -98,6 +110,11 @@ func (m *Match) Fire(s Side, c Coord) (FireResult, *Ship) {
 	if res == FireInvalid {
 		return res, nil
 	}
+	ev := Event{Side: s, Coord: c, Result: res}
+	if ship != nil {
+		ev.Ship = ship.Name
+	}
+	m.events = append(m.events, ev)
 	if target.AllSunk() {
 		m.phase = MatchOver
 		m.winner = s

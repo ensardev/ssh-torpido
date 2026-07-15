@@ -19,7 +19,12 @@ type Snapshot struct {
 	OppName    string
 	Over       bool
 	YouWon     bool
+	Events     int          // total shots fired so far (for detecting new hits)
+	Log        []game.Event // the most recent shots, oldest first
 }
+
+// logTail is how many recent shots a snapshot carries for the battle log.
+const logTail = 8
 
 // SideOf returns which side a seat plays, and whether it is seated here at all.
 func (r *Room) SideOf(seat *Seat) (game.Side, bool) {
@@ -111,5 +116,11 @@ func (r *Room) Snapshot(side game.Side) Snapshot {
 	if opp != nil {
 		snap.OppName = opp.Name
 	}
+	all := m.Events()
+	snap.Events = len(all)
+	if len(all) > logTail {
+		all = all[len(all)-logTail:]
+	}
+	snap.Log = append([]game.Event(nil), all...) // copy so the UI never reads the live slice
 	return snap
 }

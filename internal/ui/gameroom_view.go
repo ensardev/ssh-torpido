@@ -41,9 +41,65 @@ func (m gameModel) legend() string {
 	return m.styles.legend(m.t.LegendShip, m.t.LegendHit, m.t.LegendMiss)
 }
 
+// logLine formats one battle-log event from this player's point of view.
+func (m gameModel) logLine(e game.Event) string {
+	s := m.styles
+	coord := coordName(e.Coord)
+	opp := m.opponentName()
+	byMe := e.Side == m.side
+	switch {
+	case byMe && e.Result == game.FireMiss:
+		return s.dim.Render("• " + fmt.Sprintf(m.t.LogYouMissFmt, coord))
+	case byMe && e.Result == game.FireHit:
+		return s.logGood.Render("• " + fmt.Sprintf(m.t.LogYouHitFmt, coord))
+	case byMe && e.Result == game.FireSunk:
+		return s.logGood.Render("• " + fmt.Sprintf(m.t.LogYouSunkFmt, e.Ship))
+	case !byMe && e.Result == game.FireMiss:
+		return s.dim.Render("• " + fmt.Sprintf(m.t.LogOppMissFmt, opp, coord))
+	case !byMe && e.Result == game.FireHit:
+		return s.logHit.Render("• " + fmt.Sprintf(m.t.LogOppHitFmt, opp, coord))
+	case !byMe && e.Result == game.FireSunk:
+		return s.logHit.Render("• " + fmt.Sprintf(m.t.LogOppSunkFmt, opp, e.Ship))
+	}
+	return ""
+}
+
+// logPanel renders a fixed-height battle log so the layout never jumps.
+func (m gameModel) logPanel(width int) string {
+	s := m.styles
+	const show = 6
+	log := m.snap.Log
+	if len(log) > show {
+		log = log[len(log)-show:]
+	}
+	lines := make([]string, 0, show)
+	for _, e := range log {
+		lines = append(lines, m.logLine(e))
+	}
+	for len(lines) < show {
+		lines = append([]string{" "}, lines...) // pad at the top, newest at bottom
+	}
+	inner := s.dim.Render(m.t.LogTitle) + "\n" + strings.Join(lines, "\n")
+	box := s.logBox
+	if width > 2 {
+		box = box.Width(width - 2)
+	}
+	return box.Render(inner)
+}
+
+// headerRow lays the "vs" line on the left and a badge on the right.
+func (m gameModel) headerRow(width int, badge string) string {
+	left := m.vsLine()
+	gap := width - lipgloss.Width(left) - lipgloss.Width(badge)
+	if gap < 2 {
+		gap = 2
+	}
+	return left + strings.Repeat(" ", gap) + badge
+}
+
 func (m gameModel) viewWaiting() string {
 	s := m.styles
-	body := lipgloss.JoinVertical(lipgloss.Left,
+	content := lipgloss.JoinVertical(lipgloss.Center,
 		s.header(m.t.Tagline),
 		"",
 		s.badgeYou.Render(m.t.Room+m.room.Code),
@@ -53,7 +109,7 @@ func (m gameModel) viewWaiting() string {
 		"",
 		s.help.Render(m.t.BackHelp),
 	)
-	return screen(body)
+	return s.framed(m.width, content)
 }
 
 func (m gameModel) viewPlacing() string {
@@ -84,66 +140,76 @@ func (m gameModel) viewPlacing() string {
 		}
 	}
 
-	body := lipgloss.JoinVertical(lipgloss.Left,
+	content := lipgloss.JoinVertical(lipgloss.Left,
 		m.vsLine(),
 		"",
 		s.dim.Render(m.t.PlaceFleet),
 		strings.Join(roster, "   "),
 		"",
-		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, preview, valid)),
+		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, preview, valid, nil)),
 		"",
 		m.legend(),
 		"",
 		s.help.Render(fmt.Sprintf(m.t.PlaceHelpFmt, orient)),
 	)
-	return screen(body)
+	return s.framed(m.width, content)
 }
 
 func (m gameModel) viewPlaceWait() string {
 	s := m.styles
-	body := lipgloss.JoinVertical(lipgloss.Left,
+	content := lipgloss.JoinVertical(lipgloss.Center,
 		s.header(m.t.Tagline),
 		"",
 		s.badgeYou.Render(m.t.Ready),
 		"",
-		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false)),
+		s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil)),
 		"",
 		s.tag.Render(fmt.Sprintf(m.t.OppPlacingFmt, m.opponentName())),
 		"",
 		s.help.Render(m.t.BackHelp),
 	)
-	return screen(body)
+	return s.framed(m.width, content)
 }
 
 func (m gameModel) viewBattle() string {
 	s := m.styles
+
 	var aim *game.Coord
 	if m.snap.YourTurn {
 		aim = &m.aim
 	}
-	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false))
-	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.Enemy, aim, nil, false))
-	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
-
-	var turn string
-	if m.snap.YourTurn {
-		turn = s.badgeYou.Render(m.t.YourTurn)
-	} else {
-		turn = s.badgeFoe.Render(fmt.Sprintf(m.t.OppAimingFmt, strings.ToUpper(m.opponentName())))
+	var ownBoom, enemyBoom *boomOverlay
+	if m.boom != nil {
+		if m.boom.onEnemy {
+			enemyBoom = m.boom
+		} else {
+			ownBoom = m.boom
+		}
 	}
 
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		m.vsLine(),
-		"",
-		turn+"   "+m.message,
+	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, ownBoom))
+	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.Enemy, aim, nil, false, enemyBoom))
+	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
+	bw := lipgloss.Width(boards)
+
+	var badge string
+	if m.snap.YourTurn {
+		badge = s.badgeYou.Render(m.t.YourTurn)
+	} else {
+		badge = s.badgeFoe.Render(fmt.Sprintf(m.t.OppAimingFmt, strings.ToUpper(m.opponentName())))
+	}
+
+	content := lipgloss.JoinVertical(lipgloss.Left,
+		m.headerRow(bw, badge),
 		"",
 		boards,
+		s.dim.Render(m.message),
 		"",
-		m.legend(),
+		m.logPanel(bw),
 		"",
 		s.help.Render(m.t.BattleHelp),
 	)
-	return screen(body)
+	return s.framed(m.width, content)
 }
 
 func (m gameModel) viewOver() string {
@@ -154,16 +220,17 @@ func (m gameModel) viewOver() string {
 		banner = s.lose.Render(m.t.Defeat)
 		msg = fmt.Sprintf(m.t.LoseMsgFmt, m.opponentName())
 	}
-	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false))
-	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.EnemyFull, nil, nil, false))
+	own := s.boardPanel(m.t.YourWaters, s.renderBoard(m.snap.You, nil, nil, false, nil))
+	enemy := s.boardPanel(m.t.EnemyWaters, s.renderBoard(m.snap.EnemyFull, nil, nil, false, nil))
 	boards := lipgloss.JoinHorizontal(lipgloss.Top, own, "    ", enemy)
 
-	body := lipgloss.JoinVertical(lipgloss.Left,
-		banner+"   "+msg,
+	content := lipgloss.JoinVertical(lipgloss.Center,
+		banner,
+		s.dim.Render(msg),
 		"",
 		boards,
 		"",
 		s.help.Render(m.t.OverHelp),
 	)
-	return screen(body)
+	return s.framed(m.width, content)
 }

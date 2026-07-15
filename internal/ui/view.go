@@ -40,7 +40,7 @@ func (s styles) cellBlock(c game.Cell) string {
 //   - aim, if set, highlights the targeting reticle (enemy board only).
 //   - preview, if set, highlights where a ship is about to be placed;
 //     previewValid tints it green (fits) or red (blocked).
-func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool, previewValid bool) string {
+func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool, previewValid bool, boom *boomOverlay) string {
 	var sb strings.Builder
 
 	sb.WriteString("   ")
@@ -54,6 +54,8 @@ func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool
 		for c := 0; c < game.BoardSize; c++ {
 			coord := game.Coord{Row: r, Col: c}
 			switch {
+			case boom != nil && boom.Coord == coord && boom.Frame < len(explosionGlyphs):
+				sb.WriteString(s.boom[boom.Frame].Render(explosionGlyphs[boom.Frame] + " "))
 			case preview != nil && preview[coord]:
 				if previewValid {
 					sb.WriteString(s.previewOK.Render("  "))
@@ -70,6 +72,15 @@ func (s styles) renderBoard(g grid, aim *game.Coord, preview map[game.Coord]bool
 	}
 
 	return strings.TrimRight(sb.String(), "\n")
+}
+
+// framed wraps content in the outer bordered container, centered in width.
+func (s styles) framed(width int, content string) string {
+	boxed := s.frame.Render(content)
+	if width <= 0 {
+		return boxed
+	}
+	return lipgloss.PlaceHorizontal(width, lipgloss.Center, boxed)
 }
 
 // boardPanel stacks a caption above a bordered board.

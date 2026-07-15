@@ -83,6 +83,7 @@ func (m welcomeModel) viewMenu() string {
 		"",
 		s.help.Render(m.t.WNav),
 		s.dim.Render("ssh torpido.dev"),
+		s.tag.Render("by ")+s.logo.Render("ensar.dev"),
 	)
 	return lipgloss.NewStyle().Width(m.width).Align(lipgloss.Center).Padding(1, 0).Render(block)
 }

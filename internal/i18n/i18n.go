@@ -84,6 +84,12 @@ type Strings struct {
 	WinMsgFmt, LoseMsgFmt string
 	OverHelp         string
 	Opponent         string
+
+	// battle log
+	LogTitle                              string
+	LogYouMissFmt, LogYouHitFmt, LogYouSunkFmt string // arg: coord / coord / ship
+	LogOppMissFmt, LogOppHitFmt           string // args: name, coord
+	LogOppSunkFmt                         string // args: name, ship
 }
 
 var dicts = map[Lang]Strings{
@@ -163,6 +169,14 @@ var dicts = map[Lang]Strings{
 		LoseMsgFmt: "%s beat you.",
 		OverHelp:   "enter/q back to lobby",
 		Opponent:   "opponent",
+
+		LogTitle:      "BATTLE LOG",
+		LogYouMissFmt: "You fired at %s — miss",
+		LogYouHitFmt:  "You hit %s",
+		LogYouSunkFmt: "You sank the enemy %s",
+		LogOppMissFmt: "%s fired at %s — miss",
+		LogOppHitFmt:  "%s hit you at %s",
+		LogOppSunkFmt: "%s sank your %s",
 	},
 
 	TR: {
@@ -241,5 +255,13 @@ var dicts = map[Lang]Strings{
 		LoseMsgFmt: "%s seni yendi.",
 		OverHelp:   "enter/q lobiye dön",
 		Opponent:   "rakip",
+
+		LogTitle:      "SAVAŞ KAYDI",
+		LogYouMissFmt: "%s'e ateş ettin — ıska",
+		LogYouHitFmt:  "%s — isabet",
+		LogYouSunkFmt: "Düşmanın %s gemisini batırdın",
+		LogOppMissFmt: "%s, %s'e ateş etti — ıska",
+		LogOppHitFmt:  "%s seni %s'te vurdu",
+		LogOppSunkFmt: "%s senin %s gemini batırdı",
 	},
 }
