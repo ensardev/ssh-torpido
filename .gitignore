@@ -25,6 +25,9 @@ go.work.sum
 # Persistent player stats
 stats.json
 
+# Build output
+dist/
+
 # Editor
 .vscode/
 .idea/
