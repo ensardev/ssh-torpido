@@ -78,15 +78,15 @@ func (s styles) boardPanel(caption string, board string) string {
 }
 
 // header is the logo line shown on every screen.
-func (s styles) header() string {
-	return s.logo.Render("🚢 TORPIDO") + "  " + s.tag.Render("terminal amiral battı")
+func (s styles) header(tagline string) string {
+	return s.logo.Render("🚢 TORPIDO") + "  " + s.tag.Render(tagline)
 }
 
 // legend explains the glyphs, using the real colored blocks as a key.
-func (s styles) legend() string {
-	return s.ship.Render("  ") + s.dim.Render(" gemi   ") +
-		s.hit.Render("✖ ") + s.dim.Render(" isabet   ") +
-		s.miss.Render("○ ") + s.dim.Render(" ıska")
+func (s styles) legend(ship, hit, miss string) string {
+	return s.ship.Render("  ") + s.dim.Render(" "+ship+"   ") +
+		s.hit.Render("✖ ") + s.dim.Render(" "+hit+"   ") +
+		s.miss.Render("○ ") + s.dim.Render(" "+miss)
 }
 
 // screen wraps a screen body with the standard outer padding.

@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
@@ -47,6 +48,7 @@ type gameModel struct {
 	seat     *lobby.Seat
 	side     game.Side
 	oppIsBot bool
+	t        i18n.Strings
 	renderer *lipgloss.Renderer
 	styles   styles
 
@@ -64,13 +66,14 @@ type gameModel struct {
 	message string
 }
 
-func newGameModel(room *lobby.Room, seat *lobby.Seat, r *lipgloss.Renderer) gameModel {
+func newGameModel(room *lobby.Room, seat *lobby.Seat, t i18n.Strings, r *lipgloss.Renderer) gameModel {
 	side, _ := room.SideOf(seat)
 	m := gameModel{
 		room:        room,
 		seat:        seat,
 		side:        side,
 		oppIsBot:    room.OpponentIsBot(side),
+		t:           t,
 		renderer:    r,
 		styles:      newStyles(r),
 		fleet:       game.StandardFleet,
@@ -215,13 +218,13 @@ func (m gameModel) keyBattle(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		res, ship := m.room.Fire(m.side, m.aim)
 		switch res {
 		case game.FireInvalid:
-			m.message = "Oraya zaten ateş ettin."
+			m.message = m.t.AlreadyFired
 		case game.FireMiss:
-			m.message = fmt.Sprintf("%s — ıska.", coordName(m.aim))
+			m.message = fmt.Sprintf(m.t.MissFmt, coordName(m.aim))
 		case game.FireHit:
-			m.message = fmt.Sprintf("%s — tam isabet! 💥", coordName(m.aim))
+			m.message = fmt.Sprintf(m.t.HitFmt, coordName(m.aim))
 		case game.FireSunk:
-			m.message = fmt.Sprintf("%s gemisini batırdın!", ship.Name)
+			m.message = fmt.Sprintf(m.t.SunkFmt, ship.Name)
 		}
 		m.refresh()
 		return m, m.maybeBotMove()

@@ -42,13 +42,13 @@ func TestEnterAndLeaveBotRoom(t *testing.T) {
 
 	updated, _ := root.Update(enterRoomMsg{room: room, seat: seat})
 	root = updated.(Root)
-	if !root.inGame {
+	if root.screen != rootGame {
 		t.Fatal("root should be in game after entering a bot room")
 	}
 
 	updated, _ = root.Update(leaveGameMsg{})
 	root = updated.(Root)
-	if root.inGame {
+	if root.screen != rootLobby {
 		t.Fatal("root should be back in the lobby after leaving")
 	}
 	if root.room != nil {

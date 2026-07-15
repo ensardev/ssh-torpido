@@ -6,6 +6,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
@@ -37,8 +38,9 @@ func TestTwoPlayersTakeTurns(t *testing.T) {
 	placeFleet(room, game.SideB)
 
 	r := lipgloss.DefaultRenderer()
-	ga := newGameModel(room, a, r)
-	gb := newGameModel(room, b, r)
+	en := i18n.For(i18n.EN)
+	ga := newGameModel(room, a, en, r)
+	gb := newGameModel(room, b, en, r)
 
 	if ga.phase != gameBattle || gb.phase != gameBattle {
 		t.Fatalf("both players should be in battle, got %v and %v", ga.phase, gb.phase)
@@ -78,7 +80,7 @@ func TestOpponentForfeitOnLeave(t *testing.T) {
 	placeFleet(room, game.SideB)
 
 	r := lipgloss.DefaultRenderer()
-	gb := newGameModel(room, b, r)
+	gb := newGameModel(room, b, i18n.For(i18n.EN), r)
 
 	// Ali leaves; Veli refreshes and should see a win.
 	l.Leave(room, a)

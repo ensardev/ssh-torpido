@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -9,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/ensardev/ssh-torpido/internal/game"
+	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
@@ -33,6 +35,7 @@ const (
 type lobbyModel struct {
 	lobby    *lobby.Lobby
 	name     string
+	t        i18n.Strings
 	renderer *lipgloss.Renderer
 	styles   styles
 
@@ -44,10 +47,11 @@ type lobbyModel struct {
 	input string
 }
 
-func newLobbyModel(l *lobby.Lobby, name string, r *lipgloss.Renderer) lobbyModel {
+func newLobbyModel(l *lobby.Lobby, name string, t i18n.Strings, r *lipgloss.Renderer) lobbyModel {
 	m := lobbyModel{
 		lobby:    l,
 		name:     name,
+		t:        t,
 		renderer: r,
 		styles:   newStyles(r),
 	}
@@ -81,7 +85,6 @@ func lobbyTick() tea.Cmd {
 
 func (m lobbyModel) Init() tea.Cmd { return lobbyTick() }
 
-// newSeat makes this player's seat for a room they're about to enter.
 func (m lobbyModel) newSeat() *lobby.Seat { return lobby.NewHumanSeat(m.name) }
 
 func (m lobbyModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -159,20 +162,32 @@ func (m lobbyModel) selectRoom() (tea.Model, tea.Cmd) {
 	}
 	info := m.rooms[m.cursor]
 	if info.HasPassword {
-		m.notice = "Şifreli oda — şifre girişi sıradaki adımda geliyor 🔜"
+		m.notice = m.t.LPasswordSoon
 		return m, nil
 	}
 	return m.joinByCode(info.Code)
 }
 
 func (m lobbyModel) joinByCode(code string) (tea.Model, tea.Cmd) {
-	l, seat := m.lobby, m.newSeat()
+	l, seat, t := m.lobby, m.newSeat(), m.t
 	return m, func() tea.Msg {
 		room, err := l.JoinByCode(code, seat, "")
 		if err != nil {
-			return lobbyNoticeMsg(err.Error())
+			return lobbyNoticeMsg(joinErrText(err, t))
 		}
 		return enterRoomMsg{room: room, seat: seat}
+	}
+}
+
+// joinErrText maps a lobby join error to a translated message.
+func joinErrText(err error, t i18n.Strings) string {
+	switch {
+	case errors.Is(err, lobby.ErrNoRoom):
+		return t.LErrNoRoom
+	case errors.Is(err, lobby.ErrRoomFull):
+		return t.LErrRoomFull
+	default:
+		return err.Error()
 	}
 }
 
@@ -215,7 +230,7 @@ func (m lobbyModel) View() string {
 			line = fmt.Sprintf("%s %-12s %s",
 				s.tierStyle(info.Tier).Render("●"),
 				info.HostName,
-				s.dim.Render("bot · 1/2 bekliyor"))
+				s.dim.Render(m.t.LBotWaiting))
 		} else {
 			lock := ""
 			if info.HasPassword {
@@ -223,11 +238,11 @@ func (m lobbyModel) View() string {
 			}
 			host := info.HostName
 			if host == "" {
-				host = "oyuncu"
+				host = m.t.LPlayer
 			}
 			line = fmt.Sprintf("%s⚔ %s %s",
 				lock, s.logo.Render(info.Code),
-				s.dim.Render(fmt.Sprintf("%s · %d/2 bekliyor", host, info.Players)))
+				s.dim.Render(fmt.Sprintf(m.t.LHumanWaitingFmt, host, info.Players)))
 		}
 		if i == m.cursor {
 			line = s.rosterNow.Render("▸ " + strings.TrimPrefix(line, " "))
@@ -237,13 +252,13 @@ func (m lobbyModel) View() string {
 		rows = append(rows, line)
 	}
 	if len(rows) == 0 {
-		rows = append(rows, s.dim.Render("  (oda yok)"))
+		rows = append(rows, s.dim.Render("  "+m.t.LNoRooms))
 	}
 	list := s.box.Render(strings.Join(rows, "\n"))
 
-	footer := s.help.Render("↑↓ seç · enter gir · c oda kur · h hızlı eşleş · k kodla katıl · q çık")
+	footer := s.help.Render(m.t.LFooter)
 	if m.mode == modeJoinCode {
-		footer = s.badgeYou.Render("KOD: "+m.input+"_") + "  " + s.help.Render("harfleri yaz · enter katıl · esc iptal")
+		footer = s.badgeYou.Render(m.t.LCode+m.input+"_") + "  " + s.help.Render(m.t.LCodeHelp)
 	}
 
 	notice := ""
@@ -252,9 +267,9 @@ func (m lobbyModel) View() string {
 	}
 
 	body := lipgloss.JoinVertical(lipgloss.Left,
-		s.header(),
+		s.header(m.t.Tagline),
 		"",
-		s.dim.Render("AÇIK ODALAR:"),
+		s.dim.Render(m.t.LOpenRooms),
 		list,
 		"",
 		notice+footer,

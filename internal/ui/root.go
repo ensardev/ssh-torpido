@@ -3,32 +3,48 @@ package ui
 import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ensardev/ssh-torpido/internal/i18n"
 	"github.com/ensardev/ssh-torpido/internal/lobby"
 )
 
-// Root is the top-level model for one connection. It shows the lobby, and swaps
-// to a game when the player enters a room, swapping back when the game ends.
+type rootScreen int
+
+const (
+	rootWelcome rootScreen = iota
+	rootLobby
+	rootGame
+)
+
+// Root is the top-level model for one connection. It walks the player from the
+// welcome screen to the lobby to a game, and carries the chosen language.
 type Root struct {
 	lobby    *lobby.Lobby
 	name     string
 	renderer *lipgloss.Renderer
 
-	inGame bool
-	lobbyM lobbyModel
-	gameM  gameModel
+	lang   i18n.Lang
+	t      i18n.Strings
+	screen rootScreen
+
+	welcomeM welcomeModel
+	lobbyM   lobbyModel
+	gameM    gameModel
 
 	// the room/seat the player currently occupies, so we can free it on leave
 	room *lobby.Room
 	seat *lobby.Seat
 }
 
-// NewRoot returns the model a connection starts with: the lobby.
+// NewRoot returns the model a connection starts with: the welcome screen.
 func NewRoot(l *lobby.Lobby, name string, renderer *lipgloss.Renderer) Root {
 	return Root{
 		lobby:    l,
 		name:     name,
 		renderer: renderer,
-		lobbyM:   newLobbyModel(l, name, renderer),
+		lang:     i18n.EN,
+		t:        i18n.For(i18n.EN),
+		screen:   rootWelcome,
+		welcomeM: newWelcomeModel(i18n.EN, renderer),
 	}
 }
 
@@ -44,14 +60,21 @@ type leaveGameMsg struct{}
 
 func leaveGame() tea.Msg { return leaveGameMsg{} }
 
-func (m Root) Init() tea.Cmd { return m.lobbyM.Init() }
+func (m Root) Init() tea.Cmd { return m.welcomeM.Init() }
 
 func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case startLobbyMsg:
+		m.lang = msg.lang
+		m.t = i18n.For(msg.lang)
+		m.lobbyM = newLobbyModel(m.lobby, m.name, m.t, m.renderer)
+		m.screen = rootLobby
+		return m, m.lobbyM.Init()
+
 	case enterRoomMsg:
 		m.room, m.seat = msg.room, msg.seat
-		m.gameM = newGameModel(msg.room, msg.seat, m.renderer)
-		m.inGame = true
+		m.gameM = newGameModel(msg.room, msg.seat, m.t, m.renderer)
+		m.screen = rootGame
 		return m, m.gameM.Init()
 
 	case leaveGameMsg:
@@ -59,24 +82,34 @@ func (m Root) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.lobby.Leave(m.room, m.seat)
 			m.room, m.seat = nil, nil
 		}
-		m.inGame = false
-		m.lobbyM = newLobbyModel(m.lobby, m.name, m.renderer)
+		m.lobbyM = newLobbyModel(m.lobby, m.name, m.t, m.renderer)
+		m.screen = rootLobby
 		return m, m.lobbyM.Init()
 	}
 
-	if m.inGame {
+	switch m.screen {
+	case rootWelcome:
+		wm, cmd := m.welcomeM.Update(msg)
+		m.welcomeM = wm.(welcomeModel)
+		return m, cmd
+	case rootLobby:
+		lm, cmd := m.lobbyM.Update(msg)
+		m.lobbyM = lm.(lobbyModel)
+		return m, cmd
+	default:
 		gm, cmd := m.gameM.Update(msg)
 		m.gameM = gm.(gameModel)
 		return m, cmd
 	}
-	lm, cmd := m.lobbyM.Update(msg)
-	m.lobbyM = lm.(lobbyModel)
-	return m, cmd
 }
 
 func (m Root) View() string {
-	if m.inGame {
+	switch m.screen {
+	case rootWelcome:
+		return m.welcomeM.View()
+	case rootLobby:
+		return m.lobbyM.View()
+	default:
 		return m.gameM.View()
 	}
-	return m.lobbyM.View()
 }
