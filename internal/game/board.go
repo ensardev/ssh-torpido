@@ -144,6 +144,19 @@ func (b *Board) AllSunk() bool {
 	return true
 }
 
+// Grid returns a value copy of the whole board as cell states, so the UI can
+// render it without touching the live board (important once a board is shared
+// between goroutines). revealShips has the same meaning as in StateAt.
+func (b *Board) Grid(revealShips bool) [BoardSize][BoardSize]Cell {
+	var g [BoardSize][BoardSize]Cell
+	for r := 0; r < BoardSize; r++ {
+		for c := 0; c < BoardSize; c++ {
+			g[r][c] = b.StateAt(Coord{Row: r, Col: c}, revealShips)
+		}
+	}
+	return g
+}
+
 // StateAt returns what a square should display. revealShips controls whether
 // un-hit ships are visible (true for your own board, false for the enemy's).
 func (b *Board) StateAt(c Coord, revealShips bool) Cell {
